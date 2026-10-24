@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: ponde-pesquisas-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npx prisma db push && npx prisma db seed
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://caiotenew.github.io
+      - key: ADMIN_EMAIL
+        value: damascenocaio311@gmail.com
+      - key: ADMIN_NAME
+        value: Caio Damasceno
+      - key: ADMIN_PASSWORD
+        sync: false
