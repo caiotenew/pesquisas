@@ -430,7 +430,28 @@ function openSendModal() {
 }
 function closeSendModal() { $('send-modal').classList.add('hidden'); $('send-modal').classList.remove('flex'); }
 
-function destroyChart(name) { if (charts[name]) charts[name].destroy(); }
+function destroyChart(name) {
+  const canvas = $(`chart-${name}`);
+
+  // Procura a instância que o próprio Chart.js mantém no canvas.
+  const registeredChart =
+    canvas && window.Chart && typeof window.Chart.getChart === 'function'
+      ? window.Chart.getChart(canvas)
+      : null;
+
+  // Também limpa a referência guardada pelo aplicativo.
+  const trackedChart = charts[name];
+
+  if (trackedChart && trackedChart !== registeredChart) {
+    trackedChart.destroy();
+  }
+
+  if (registeredChart) {
+    registeredChart.destroy();
+  }
+
+  delete charts[name];
+}
 function labelsForMap(map, labels) { return labels.map((key) => map[key] || 0); }
 function dateRangeKeys(from, to) {
   const labels = [];
