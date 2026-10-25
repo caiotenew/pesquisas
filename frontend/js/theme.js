@@ -52,8 +52,17 @@
       } else if (canvasId === 'chart-questions') {
         Object.assign(datasets[0], { backgroundColor: C.teal, borderRadius: 7 });
       } else if (canvasId === 'chart-youngs') {
-        Object.assign(datasets[0], { backgroundColor: C.teal, borderRadius: 7 });
-        if (datasets[1]) Object.assign(datasets[1], { backgroundColor: 'rgba(18,59,93,.18)', borderRadius: 7 });
+        Object.assign(datasets[0], { backgroundColor: C.teal, hoverBackgroundColor: C.tealDark, borderRadius: 7 });
+        if (datasets[1]) Object.assign(datasets[1], { backgroundColor: 'rgba(18,59,93,.18)', hoverBackgroundColor: 'rgba(18,59,93,.28)', borderRadius: 7 });
+      }
+
+      const scales = chart.options && chart.options.scales;
+      if (scales) {
+        Object.values(scales).forEach((scale) => {
+          scale.grid = { ...(scale.grid || {}), color: C.grid, drawBorder: false };
+          scale.border = { ...(scale.border || {}), display: false };
+          scale.ticks = { ...(scale.ticks || {}), color: C.text, font: { family: 'Inter, sans-serif', size: 10 } };
+        });
       }
     }
   });

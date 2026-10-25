@@ -13,7 +13,8 @@ const ALLOWED_DURING_PASSWORD_CHANGE = [
 
 async function auth(req, res, next) {
   try {
-    const header = req.headers.authorization || '';
+    const authorization = req.headers.authorization;
+    const header = typeof authorization === 'string' ? authorization : '';
     const token = header.startsWith('Bearer ')
       ? header.slice(7)
       : null;

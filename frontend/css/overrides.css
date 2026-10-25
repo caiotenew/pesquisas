@@ -185,152 +185,75 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
-/* PONDE — tipografia Wise + identidade Provida */
+/* Refinamentos finais: aparência consistente entre login, formulários e painéis. */
 :root {
   --font-display: 'Inter', sans-serif;
   --font-provida: 'Inter', sans-serif;
-
-  --ui-bg: #f5f7f8;
-  --ui-panel: #ffffff;
-  --ui-border: rgba(18, 59, 93, .14);
-  --ui-text: #0e0f0c;
-  --ui-muted: #65716b;
-  --ui-radius: 28px;
-  --ui-shadow: none;
+  --ui-shadow: 0 1px 2px rgba(16,45,70,.035), 0 8px 24px rgba(16,45,70,.045);
 }
 
-html,
-body,
-button,
-input,
-select,
-textarea {
-  font-family: 'Inter', sans-serif !important;
+.auth-card {
+  box-shadow: 0 14px 38px rgba(16,45,70,.075), 0 2px 6px rgba(16,45,70,.025) !important;
 }
+.auth-pane .field-group label { color: #334f63; }
+.auth-card .primary-button { box-shadow: 0 5px 13px rgba(8,127,134,.14) !important; }
 
-h1,
-h2,
-h3,
-h4,
-.auth-heading-block h1,
-#screen-app h2,
-#screen-app h3,
-.chart-title,
-.kpi-card strong,
-.dlg-title {
-  font-family: 'Inter', sans-serif !important;
-  font-weight: 900;
-  letter-spacing: -.04em;
-}
-
-/* Barra lateral azul-marinho Provida */
-#sidebar {
-  background: linear-gradient(180deg, #143b56 0%, #102d46 100%) !important;
-  color: #d8e3ec !important;
-  border-right: 0 !important;
-  box-shadow: none !important;
-}
-
-#sidebar .mb-7 .text-white,
-#sidebar #user-name {
-  color: #ffffff !important;
-}
-
-#sidebar .mb-7 .text-cyan-400,
-#sidebar #user-role {
-  color: #6fdcd4 !important;
-}
-
-#sidebar .mb-6.rounded-2xl {
-  background: rgba(255,255,255,.06) !important;
-  border-color: rgba(255,255,255,.12) !important;
-}
-
-#sidebar .nav-item {
-  color: #d2dce6 !important;
-  border-radius: 9999px !important;
-}
-
-#sidebar .nav-item:hover {
-  background: rgba(255,255,255,.09) !important;
-  color: #ffffff !important;
-}
-
-#sidebar .nav-item.bg-cyan-600,
-#sidebar .nav-item.bg-cyan-600.text-white {
-  color: #ffffff !important;
-  background: rgba(8,165,160,.25) !important;
-  border-color: rgba(111,220,212,.25) !important;
-  box-shadow: inset 3px 0 0 #6fdcd4 !important;
-}
-
-#sidebar #change-password-btn {
-  color: #d2dce6 !important;
-}
-
-#sidebar #logout-btn {
-  color: #ffb4b4 !important;
-}
-
-/* Cartões limpos, sem sombras */
 .kpi-card,
 .chart-card,
 .question-card,
 .person-card,
-#view-dashboard .kpi-card,
-#view-dashboard .chart-card,
-#view-pesquisa .question-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(18,59,93,.14) !important;
-  border-radius: 28px !important;
-  box-shadow: none !important;
+#view-dashboard article.rounded-2xl,
+#view-download article,
+#view-backup article,
+#view-admin article,
+#view-online article {
+  border-radius: 20px !important;
+  box-shadow: 0 1px 2px rgba(16,45,70,.025), 0 7px 20px rgba(16,45,70,.035) !important;
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
 }
-
-#view-dashboard .kpi-card::before {
-  background: #08a5a0 !important;
+.kpi-card:hover,
+.person-card:hover {
+  border-color: #c8d7df !important;
+  box-shadow: 0 5px 18px rgba(16,45,70,.075) !important;
 }
+#view-dashboard .chart-card { padding: 22px !important; }
+#view-dashboard .chart-title { margin-bottom: 13px; }
+#view-dashboard .kpi-card strong { letter-spacing: -.035em; }
+#view-dashboard .insight-item { border: 1px solid #e8eef1; background: #f8fafb; }
 
-#view-dashboard .kpi-card strong,
-#view-dashboard .chart-title,
-#view-pesquisa .question-title {
-  color: #123b5d !important;
+/* Campos coerentes também nas telas de administração, exportação e backup. */
+#screen-app .field,
+#screen-app .field-sm,
+#screen-app select,
+#screen-app textarea,
+#screen-app .role-select,
+#screen-app #table-search {
+  border-color: #d3dee4;
+  border-radius: 11px;
+  color: #243f52;
+  background-color: #fff;
 }
-
-/* Botões pill: estilo Wise, cores Provida */
-.btn-primary,
-.btn-dark,
-.btn-light,
-.btn-danger,
-.primary-button,
-.auth-tab,
-.filter-chip,
-.online-chip,
-.active-chip,
-.btn-mini {
-  border-radius: 9999px !important;
-  box-shadow: none !important;
+#screen-app .field:focus,
+#screen-app .field-sm:focus,
+#screen-app select:focus,
+#screen-app textarea:focus,
+#screen-app .role-select:focus,
+#screen-app #table-search:focus {
+  border-color: var(--wise-accent-dark);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(8,165,160,.12);
 }
+#screen-app table { font-variant-numeric: tabular-nums; }
+#screen-app table tbody tr { transition: background-color .14s ease; }
+#sidebar { box-shadow: 5px 0 22px rgba(16,45,70,.055) !important; }
+#sidebar .nav-item { transition: background-color .16s ease, color .16s ease, border-color .16s ease; }
 
-.btn-primary,
-.primary-button {
-  background: #087f86 !important;
-  border-color: #087f86 !important;
-  color: #ffffff !important;
+@media (max-width: 767px) {
+  .auth-card { box-shadow: 0 8px 26px rgba(16,45,70,.055) !important; }
+  #view-dashboard .chart-card { padding: 16px !important; }
+  #view-dashboard .chart-box { min-width: 0; }
+  #view-download article, #view-backup article, #view-admin article, #view-online article { border-radius: 17px !important; }
 }
-
-.btn-primary:hover,
-.primary-button:hover {
-  background: #066d75 !important;
-}
-
-.auth-tab.is-selected {
-  color: #123b5d !important;
-}
-
-#screen-app > main {
-  background: #f5f7f8 !important;
-}
-
-#screen-app table thead {
-  background: #f3f6f8 !important;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; }
 }

@@ -39,6 +39,11 @@ function toast(message, type='info') {
 }
 
 async function api(path, options={}) {
+  // Valida a rota antes de usar operações de string. Isso mantém a origem de
+  // chamadas inválidas explícita em vez de produzir "startsWith is not a function".
+  if (typeof path !== 'string' || path.length === 0) {
+    throw new TypeError('A rota da API deve ser uma string não vazia.');
+  }
   const headers = { ...(options.headers || {}) };
   if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   const token = localStorage.getItem(TOKEN_KEY);
@@ -431,46 +436,89 @@ function openSendModal() {
 function closeSendModal() { $('send-modal').classList.add('hidden'); $('send-modal').classList.remove('flex'); }
 
 function destroyChart(name) {
-  const canvas = document.getElementById('chart-' + name);
+  const canvas = document.getElementById(`chart-${name}`);
   const ChartRef = window.Chart;
-
-  if (!canvas || !ChartRef) {
+  if (!ChartRef) {
     delete charts[name];
     return;
   }
 
-  const instances = new Set();
-
-  if (charts[name]) {
-    instances.add(charts[name]);
+  const candidates = new Set();
+  const trackedChart = charts[name];
+  if (trackedChart) {
+    const trackedIsRegistered = typeof ChartRef.getChart !== 'function'
+      || ChartRef.getChart(trackedChart.canvas) === trackedChart;
+    if (trackedIsRegistered) candidates.add(trackedChart);
   }
 
-  if (ChartRef.instances) {
+  if (canvas && ChartRef.instances) {
     Object.values(ChartRef.instances).forEach((chart) => {
-      if (
-        chart &&
-        (chart.canvas === canvas || chart.canvas?.id === canvas.id)
-      ) {
-        instances.add(chart);
+      if (chart && (chart.canvas === canvas || chart.canvas?.id === canvas.id)) {
+        candidates.add(chart);
       }
     });
   }
 
-  if (typeof ChartRef.getChart === 'function') {
-    const registered = ChartRef.getChart(canvas);
-    if (registered) instances.add(registered);
+  if (canvas && typeof ChartRef.getChart === 'function') {
+    const registeredChart = ChartRef.getChart(canvas) || ChartRef.getChart(canvas.id);
+    if (registeredChart) candidates.add(registeredChart);
   }
 
-  instances.forEach((chart) => {
+  let destroyFailure = null;
+  candidates.forEach((chart) => {
+    if (!chart) return;
+    // stop() is only an optimization: even if it fails, destroy() must run.
     try {
-      chart.stop();
-      chart.destroy();
+      if (typeof chart.stop === 'function') chart.stop();
     } catch (error) {
-      console.warn('Falha ao destruir gráfico anterior:', error);
+      console.warn(`Não foi possível interromper a animação do gráfico ${name}:`, error);
+    }
+
+    try {
+      if (typeof chart.destroy === 'function') chart.destroy();
+    } catch (error) {
+      destroyFailure ||= error;
+      console.error(`Não foi possível destruir a instância do gráfico ${name}:`, error);
     }
   });
 
   delete charts[name];
+
+  const remainingChart = canvas && typeof ChartRef.getChart === 'function'
+    ? (ChartRef.getChart(canvas) || ChartRef.getChart(canvas.id))
+    : null;
+  if (remainingChart || destroyFailure) {
+    const error = new Error(`O canvas "chart-${name}" continua ocupado após a limpeza do gráfico.`);
+    if (destroyFailure) error.cause = destroyFailure;
+    throw error;
+  }
+}
+
+function createManagedChart(name, config) {
+  const canvas = document.getElementById(`chart-${name}`);
+  const ChartRef = window.Chart;
+  if (!canvas) throw new Error(`Canvas "chart-${name}" não encontrado.`);
+  if (typeof ChartRef !== 'function') throw new Error('Chart.js não está disponível nesta página.');
+
+  destroyChart(name);
+
+  // Segunda verificação imediatamente antes do construtor, no mesmo canvas.
+  const alreadyRegistered = typeof ChartRef.getChart === 'function'
+    ? (ChartRef.getChart(canvas) || ChartRef.getChart(canvas.id))
+    : null;
+  if (alreadyRegistered) {
+    alreadyRegistered.destroy();
+  }
+  const stillRegistered = typeof ChartRef.getChart === 'function'
+    ? (ChartRef.getChart(canvas) || ChartRef.getChart(canvas.id))
+    : null;
+  if (stillRegistered) {
+    throw new Error(`Não foi possível liberar "chart-${name}" para reutilização.`);
+  }
+
+  const instance = new ChartRef(canvas, config);
+  charts[name] = instance;
+  return instance;
 }
 function labelsForMap(map, labels) { return labels.map((key) => map[key] || 0); }
 function dateRangeKeys(from, to) {
@@ -494,8 +542,7 @@ function renderDashboardCharts(data) {
   const dailyLabels = dateRangeKeys(from, to);
   const dailyValues = dailyLabels.map((key) => data.daily[key] || 0);
 
-  const daysCtx = $('chart-daily'); destroyChart('daily');
-  charts.daily = new Chart(daysCtx, {
+  createManagedChart('daily', {
     type: dailyType === 'bar' ? 'bar' : 'line',
     data:{ labels:dailyLabels.map(formatDateBR), datasets:[
       { type:dailyType, label:'Pesquisas', data:dailyValues, tension:.28, borderWidth:3, pointRadius:4, pointHoverRadius:7, fill:true, borderRadius:6 },
@@ -508,20 +555,16 @@ function renderDashboardCharts(data) {
 
   const satLabels = ['Muito Satisfeito','Satisfeito','Insatisfeito','Muito Insatisfeito'];
   const satKeys = ['MUITO_SATISFEITO','SATISFEITO','INSATISFEITO','MUITO_INSATISFEITO'];
-  const satCtx = $('chart-satisfaction'); destroyChart('satisfaction');
-  charts.satisfaction = new Chart(satCtx, { type:'doughnut', data:{ labels:satLabels, datasets:[{ data:labelsForMap(data.satisfaction,satKeys), borderWidth:2 }] }, options:{ ...chartBaseOptions(), cutout:'62%', plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label:(ctx) => { const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1; return ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw / total * 100)}%)`; } } } } } });
+  createManagedChart('satisfaction', { type:'doughnut', data:{ labels:satLabels, datasets:[{ data:labelsForMap(data.satisfaction,satKeys), borderWidth:2 }] }, options:{ ...chartBaseOptions(), cutout:'62%', plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label:(ctx) => { const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1; return ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw / total * 100)}%)`; } } } } } });
 
   const recLabels = ['Com Certeza','Sim','Não','De jeito Nenhum'];
   const recKeys = ['COM_CERTEZA','SIM','NAO','DE_JEITO_NENHUM'];
-  const recCtx = $('chart-recommendation'); destroyChart('recommendation');
-  charts.recommendation = new Chart(recCtx, { type:'bar', data:{ labels:recLabels, datasets:[{ label:'Respostas', data:labelsForMap(data.recommendation,recKeys), borderRadius:7, borderWidth:0 }] }, options:{ ...chartBaseOptions(), scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }, plugins:{ legend:{ display:false } } } });
+  createManagedChart('recommendation', { type:'bar', data:{ labels:recLabels, datasets:[{ label:'Respostas', data:labelsForMap(data.recommendation,recKeys), borderRadius:7, borderWidth:0 }] }, options:{ ...chartBaseOptions(), scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }, plugins:{ legend:{ display:false } } } });
 
-  const qCtx = $('chart-questions'); destroyChart('questions');
-  charts.questions = new Chart(qCtx, { type:'bar', data:{ labels:data.questionPerformance.map((q) => q.label), datasets:[{ label:'Satisfação positiva (%)', data:data.questionPerformance.map((q) => q.positive), borderRadius:7 }] }, options:{ ...chartBaseOptions(), indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, ticks:{ callback:(value) => `${value}%` } } }, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(ctx) => `${ctx.raw}%` } } } } });
+  createManagedChart('questions', { type:'bar', data:{ labels:data.questionPerformance.map((q) => q.label), datasets:[{ label:'Satisfação positiva (%)', data:data.questionPerformance.map((q) => q.positive), borderRadius:7 }] }, options:{ ...chartBaseOptions(), indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, ticks:{ callback:(value) => `${value}%` } } }, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(ctx) => `${ctx.raw}%` } } } } });
 
   const youngRows = lastDashboardUsers || [];
-  const yCtx = $('chart-youngs'); destroyChart('youngs');
-  charts.youngs = new Chart(yCtx, { type:'bar', data:{ labels:youngRows.map((u) => u.nome), datasets:[
+  createManagedChart('youngs', { type:'bar', data:{ labels:youngRows.map((u) => u.nome), datasets:[
     { label:'Média/dia', data:youngRows.map((u) => u.avgPerDay), borderRadius:7 },
     { label:'Meta diária', data:youngRows.map(() => META), borderRadius:7 }
   ] }, options:{ ...chartBaseOptions(), scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } },
@@ -1011,4 +1054,3 @@ window.PondeApp = {
 };
 
 document.addEventListener('DOMContentLoaded', init);
-
