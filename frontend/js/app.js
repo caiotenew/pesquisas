@@ -1,4 +1,4 @@
-const API = (window.APP_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
+﻿const API = (window.APP_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
 const META = 60;
 const TOKEN_KEY = 'ponde_auth_token';
 const USER_KEY = 'ponde_auth_user';
@@ -431,24 +431,44 @@ function openSendModal() {
 function closeSendModal() { $('send-modal').classList.add('hidden'); $('send-modal').classList.remove('flex'); }
 
 function destroyChart(name) {
-  const canvas = $(`chart-${name}`);
+  const canvas = document.getElementById('chart-' + name);
+  const ChartRef = window.Chart;
 
-  // Procura a instância que o próprio Chart.js mantém no canvas.
-  const registeredChart =
-    canvas && window.Chart && typeof window.Chart.getChart === 'function'
-      ? window.Chart.getChart(canvas)
-      : null;
-
-  // Também limpa a referência guardada pelo aplicativo.
-  const trackedChart = charts[name];
-
-  if (trackedChart && trackedChart !== registeredChart) {
-    trackedChart.destroy();
+  if (!canvas || !ChartRef) {
+    delete charts[name];
+    return;
   }
 
-  if (registeredChart) {
-    registeredChart.destroy();
+  const instances = new Set();
+
+  if (charts[name]) {
+    instances.add(charts[name]);
   }
+
+  if (ChartRef.instances) {
+    Object.values(ChartRef.instances).forEach((chart) => {
+      if (
+        chart &&
+        (chart.canvas === canvas || chart.canvas?.id === canvas.id)
+      ) {
+        instances.add(chart);
+      }
+    });
+  }
+
+  if (typeof ChartRef.getChart === 'function') {
+    const registered = ChartRef.getChart(canvas);
+    if (registered) instances.add(registered);
+  }
+
+  instances.forEach((chart) => {
+    try {
+      chart.stop();
+      chart.destroy();
+    } catch (error) {
+      console.warn('Falha ao destruir gráfico anterior:', error);
+    }
+  });
 
   delete charts[name];
 }
@@ -991,3 +1011,4 @@ window.PondeApp = {
 };
 
 document.addEventListener('DOMContentLoaded', init);
+
